@@ -20,6 +20,14 @@ func main() {
 		panic(err)
 	}
 
+	log.Println("Getting single Todo")
+	t, err := client.GetTodo(milkTodo.ID)
+	if err != nil {
+		panic(err)
+	}
+
+	pp.Println(t)
+
 	log.Println("Getting all Todos")
 	todos, err := client.GetTodos()
 	if err != nil {

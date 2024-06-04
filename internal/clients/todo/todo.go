@@ -37,6 +37,23 @@ func (c *Client) CreateTodo(t todo.Todo) (*todo.Todo, error) {
 	return &createdTodo, nil
 }
 
+func (c *Client) GetTodo(id int) (*todo.Todo, error) {
+	getTodoURL := fmt.Sprintf("%s/todos/%d", c.BaseURL, id)
+	resp, err := http.Get(getTodoURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var todo todo.Todo
+	err = json.NewDecoder(resp.Body).Decode(&todo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &todo, nil
+}
+
 func (c *Client) GetTodos() ([]todo.Todo, error) {
 	getTodosURL := fmt.Sprintf("%s/todos", c.BaseURL)
 	resp, err := http.Get(getTodosURL)
