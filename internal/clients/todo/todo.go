@@ -45,6 +45,10 @@ func (c *Client) GetTodo(id int) (*todo.Todo, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("todo with id %d not found", id)
+	}
+
 	var todo todo.Todo
 	err = json.NewDecoder(resp.Body).Decode(&todo)
 	if err != nil {

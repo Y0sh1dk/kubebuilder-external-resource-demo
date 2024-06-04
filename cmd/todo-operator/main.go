@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	externalresourcedevv1alpha1 "github.com/Y0sh1dk/kubebuilder-external-resource-demo/api/v1alpha1"
+	"github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/clients/todo"
 	"github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
@@ -122,9 +123,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	todoClient := todo.NewClient("http://localhost:8080")
+
 	if err = (&controller.TodoReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		TodoClient: todoClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Todo")
 		os.Exit(1)

@@ -25,12 +25,16 @@ import (
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 
 	externalresourcedevv1alpha1 "github.com/Y0sh1dk/kubebuilder-external-resource-demo/api/v1alpha1"
+	todoClient "github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/clients/todo"
+	"github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/todo"
+	"github.com/k0kubun/pp/v3"
 )
 
 // TodoReconciler reconciles a Todo object
 type TodoReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme     *runtime.Scheme
+	TodoClient *todoClient.Client
 }
 
 //+kubebuilder:rbac:groups=external-resource.dev.external-resource.dev,resources=todoes,verbs=get;list;watch;create;update;patch;delete
@@ -39,8 +43,33 @@ type TodoReconciler struct {
 
 func (r *TodoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logger.FromContext(ctx)
-
 	log.Info("Reconciling Todo", "Name", req.NamespacedName, "Namespace", req.Namespace)
+
+	t := &externalresourcedevv1alpha1.Todo{}
+	if err := r.Get(ctx, req.NamespacedName, t); err != nil {
+		log.Error(err, "Failed to get Todo")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	todoBackendObj := &todo.Todo{
+		ID:    t.Status.ID,
+		Title: t.Spec.Title,
+	}
+
+	err := r.createOrUpdate(ctx, todoBackendObj)
+	if err != nil {
+		log.Error(err, "Failed to create or update Todo")
+		return ctrl.Result{}, err
+	}
+
+	pp.Println(todoBackendObj)
+
+	t.Status.ID = todoBackendObj.ID
+	if err := r.Status().Update(ctx, t); err != nil {
+		log.Error(err, "Failed to update Todo status")
+
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -50,4 +79,40 @@ func (r *TodoReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&externalresourcedevv1alpha1.Todo{}).
 		Complete(r)
+}
+
+func (r *TodoReconciler) createOrUpdate(ctx context.Context, t *todo.Todo) error {
+	log := logger.FromContext(ctx)
+
+	existing, err := r.TodoClient.GetTodo(t.ID)
+	if err != nil { // Does not exist, create it
+		log.Info("Creating Todo", "Title", t.Title)
+
+		created, err := r.TodoClient.CreateTodo(*t)
+		if err != nil {
+			log.Info("Failed to create Todo", "Title", t.Title)
+
+			return err
+		}
+
+		t.ID = created.ID
+
+		return nil
+	}
+
+	// Does exist, update it
+	log.Info("Updating Todo", "Title", t.Title)
+	existing.Title = t.Title
+
+	updated, err := r.TodoClient.UpdateTodo(*existing)
+	if err != nil {
+		log.Error(err, "Failed to update Todo")
+
+		return err
+	}
+
+	t.ID = updated.ID
+	t.Title = updated.Title
+
+	return nil
 }

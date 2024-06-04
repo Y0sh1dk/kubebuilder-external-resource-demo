@@ -44,7 +44,9 @@ func getTodo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	_ = json.NewEncoder(w).Encode(&todo.Todo{})
+	log.Println("Todo not found")
+
+	http.NotFound(w, r)
 }
 
 func createTodo(w http.ResponseWriter, r *http.Request) {
