@@ -22,12 +22,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
 
 	externalresourcedevv1alpha1 "github.com/Y0sh1dk/kubebuilder-external-resource-demo/api/v1alpha1"
 	todoClient "github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/clients/todo"
 	"github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/todo"
 	"github.com/k0kubun/pp/v3"
+)
+
+const (
+	deleteFinalizer = "finalizer.external-resource.dev"
 )
 
 // TodoReconciler reconciles a Todo object
@@ -48,7 +53,31 @@ func (r *TodoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	t := &externalresourcedevv1alpha1.Todo{}
 	if err := r.Get(ctx, req.NamespacedName, t); err != nil {
 		log.Error(err, "Failed to get Todo")
+
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Handle deletion
+	if t.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(t, deleteFinalizer) {
+			controllerutil.AddFinalizer(t, deleteFinalizer)
+			if err := r.Update(ctx, t); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(t, deleteFinalizer) {
+			if err := r.TodoClient.DeleteTodo(t.Status.ID); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			controllerutil.RemoveFinalizer(t, deleteFinalizer)
+			if err := r.Update(ctx, t); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
+		return ctrl.Result{}, nil
 	}
 
 	todoBackendObj := &todo.Todo{
