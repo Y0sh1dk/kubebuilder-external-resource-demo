@@ -5,7 +5,8 @@ import (
 )
 
 type TodoSpec struct {
-	Title string `json:"title,omitempty"`
+	//+kubebuilder:validation:Required
+	Title string `json:"title"`
 }
 
 // TodoStatus defines the observed state of Todo
@@ -22,7 +23,8 @@ type Todo struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TodoSpec   `json:"spec,omitempty"`
+	//+kubebuilder:validation:Required
+	Spec   TodoSpec   `json:"spec"`
 	Status TodoStatus `json:"status,omitempty"`
 }
 

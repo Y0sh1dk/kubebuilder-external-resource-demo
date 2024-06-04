@@ -40,6 +40,8 @@ spec:
             properties:
               title:
                 type: string
+            required:
+            - title
             type: object
           status:
             description: TodoStatus defines the observed state of Todo
@@ -47,6 +49,8 @@ spec:
               id:
                 type: integer
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
