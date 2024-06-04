@@ -18,17 +18,24 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logger "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	externalresourcedevv1alpha1 "github.com/Y0sh1dk/kubebuilder-external-resource-demo/api/v1alpha1"
 	todoClient "github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/clients/todo"
 	"github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/todo"
 	"github.com/k0kubun/pp/v3"
+	"github.com/samber/lo"
 )
 
 const (
@@ -104,9 +111,43 @@ func (r *TodoReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *TodoReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *TodoReconciler) SetupWithManager(mgr ctrl.Manager, client *todoClient.Client) error {
+	externalEventChan := make(chan event.GenericEvent)
+
+	mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		for {
+			fmt.Println("Getting all ToDos from API")
+			apiTodos, err := client.GetTodos()
+			if err != nil {
+				continue
+			}
+
+			fmt.Println("Getting all ToDos from Kube")
+			kubeTodos := &externalresourcedevv1alpha1.TodoList{}
+			if err := mgr.GetClient().List(ctx, kubeTodos); err != nil {
+				continue
+			}
+
+			lo.ForEach(apiTodos, func(item todo.Todo, index int) {
+				lo.ForEach(kubeTodos.Items, func(kubeTodo externalresourcedevv1alpha1.Todo, index int) {
+					if kubeTodo.Status.ID == item.ID {
+						return
+					}
+
+					fmt.Println("Adding Todo to workqueue", "name", kubeTodo.Name, "namespace", kubeTodo.Namespace)
+					externalEventChan <- event.GenericEvent{
+						Object: &kubeTodo,
+					}
+				})
+			})
+
+			time.Sleep(5 * time.Second)
+		}
+	}))
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&externalresourcedevv1alpha1.Todo{}).
+		WatchesRawSource(&source.Channel{Source: externalEventChan}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
 

@@ -129,7 +129,7 @@ func main() {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		TodoClient: todoClient,
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, todoClient); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Todo")
 		os.Exit(1)
 	}
