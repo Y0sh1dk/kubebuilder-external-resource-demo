@@ -12,7 +12,7 @@ spec:
     listKind: TodoList
     plural: todoes
     singular: todo
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
@@ -37,15 +37,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: TodoSpec defines the desired state of Todo
             properties:
-              foo:
-                description: Foo is an example field of Todo. Edit todo_types.go to
-                  remove/update
+              title:
                 type: string
             type: object
           status:
             description: TodoStatus defines the observed state of Todo
+            properties:
+              id:
+                type: integer
             type: object
         type: object
     served: true

@@ -30,6 +30,6 @@ install_kubebuilder
 
 init_kubebuilder
 
-create_api Todo --namespaced=false
+create_api Todo --namespaced=true
 
 cleanup
