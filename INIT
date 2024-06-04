@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+BIN_PATH=bin
+DOMAIN=external-resource.dev
+REPO=github.com/Y0sh1dk/kubebuilder-external-resource-demo
+
+install_kubebuilder() {
+    curl -s -L -o KUBEBUILDER "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
+    chmod +x KUBEBUILDER
+}
+
+init_kubebuilder() {
+    if [ -f PROJECT ]; then
+        echo "Project has already been kubebuilder initialized."
+    else
+        KUBEBUILDER init --domain ${DOMAIN} --repo ${REPO}
+    fi
+}
+
+create_api() {
+    KUBEBUILDER create api --group ${DOMAIN} --version v1alpha1 --resource --controller --kind "$1" "$2" || true
+}
+
+cleanup() {
+    mkdir -p ${BIN_PATH}
+    mv KUBEBUILDER ${BIN_PATH}/kubebuilder || true
+}
+
+install_kubebuilder
+
+init_kubebuilder
+
+create_api Todo --namespaced=false
+
+cleanup
