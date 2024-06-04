@@ -6,15 +6,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Y0sh1dk/kubebuilder-external-resource-demo/internal/todo"
 	"github.com/gorilla/mux"
 )
 
-type Todo struct {
-	ID    int    `json:"id"`
-	Title string `json:"title"`
-}
-
-var todos []Todo
+var todos []todo.Todo
 
 func main() {
 	router := mux.NewRouter()
@@ -48,12 +44,12 @@ func getTodo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	_ = json.NewEncoder(w).Encode(&Todo{})
+	_ = json.NewEncoder(w).Encode(&todo.Todo{})
 }
 
 func createTodo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var todo Todo
+	var todo todo.Todo
 	_ = json.NewDecoder(r.Body).Decode(&todo)
 	todo.ID = len(todos) + 1
 
@@ -71,7 +67,7 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Updating todo with id", id)
 
-	var updatedTodo Todo
+	var updatedTodo todo.Todo
 	_ = json.NewDecoder(r.Body).Decode(&updatedTodo)
 
 	for index, todo := range todos {
