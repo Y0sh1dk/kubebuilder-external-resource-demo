@@ -74,7 +74,8 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 
 	for index, todo := range todos {
 		if todo.ID == id {
-			todos[index] = updatedTodo
+			todos[index].Title = updatedTodo.Title
+			updatedTodo = todos[index]
 			break
 		}
 	}

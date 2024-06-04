@@ -131,12 +131,13 @@ func (r *TodoReconciler) SetupWithManager(mgr ctrl.Manager, client *todoClient.C
 			lo.ForEach(apiTodos, func(item todo.Todo, index int) {
 				lo.ForEach(kubeTodos.Items, func(kubeTodo externalresourcedevv1alpha1.Todo, index int) {
 					if kubeTodo.Status.ID == item.ID {
-						return
-					}
-
-					fmt.Println("Adding Todo to workqueue", "name", kubeTodo.Name, "namespace", kubeTodo.Namespace)
-					externalEventChan <- event.GenericEvent{
-						Object: &kubeTodo,
+						// Logic to check if object has changed outside of kube
+						if kubeTodo.Spec.Title != item.Title {
+							fmt.Println("Adding Todo to workqueue", "name", kubeTodo.Name, "namespace", kubeTodo.Namespace)
+							externalEventChan <- event.GenericEvent{
+								Object: &kubeTodo,
+							}
+						}
 					}
 				})
 			})
